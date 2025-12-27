@@ -1,0 +1,10 @@
+__pycache__/
+*.py[codz]
+*$py.class
+
+.streamlit/secrets.toml
+
+.pytest_cache/
+.vscode/
+
+notebooks/
