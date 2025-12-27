@@ -1,11 +1,11 @@
 Books Recommender
 =================
 
-Item-based collaborative filtering demo built with Streamlit and scikit-learn. It trains a kNN model on the Book-Crossing dataset and serves interactive book-to-book recommendations.
+Item-based collaborative filtering demo built with Streamlit and scikit-learn. It trains a kNN model on the Books dataset and serves interactive book-to-book recommendations.
 
 Data
 ----
-- Raw CSVs from the Book-Crossing dataset live in `data/raw/` (`BX-Users.csv`, `BX-Books.csv`, `BX-Book-Ratings.csv`).
+- Raw CSVs from the Books dataset live in `data/raw/` (`BX-Users.csv`, `BX-Books.csv`, `BX-Book-Ratings.csv`).
 - Trained artifacts are saved to `data/artifacts/recommender_system.pkl` (created by the pipeline below).
 
 Setup (Poetry)
