@@ -17,7 +17,7 @@ FROM python:3.13-slim AS runtime
 
 ENV VIRTUAL_ENV=/app/.venv \
     PATH="/app/.venv/bin:$PATH" \
-    PYTHONPATH="/app/src:$PYTHONPATH" \
+    PYTHONPATH="/app/src" \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app

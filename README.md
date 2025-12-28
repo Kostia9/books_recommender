@@ -53,20 +53,29 @@ Project layout
 Run with Docker on EC2
 ---------------------
 
-Create an EC2 instance and add a **Custom TCP inbound rule on port 8501** in the Security Group.
+Create an EC2 instance (Ubuntu) and add a **Custom TCP inbound rule on port 8501** in the Security Group.
 
 In the instance terminal:
 
 ```bash
-sudo yum update -y
-sudo yum install -y docker
-sudo service docker start
-sudo usermod -a -G docker ec2-user
+sudo apt-get update -y
+
+sudo apt-get upgrade -y
+
+curl -fsSL https://get.docker.com -o get-docker.sh
+
+sudo sh get-docker.sh
+
+sudo usermod -aG docker ubuntu
+
 newgrp docker
-sudo yum install git -y
+
 git clone https://github.com/Kostia9/books_recommender
+
 cd books_recommender
+
 docker build -t books-app .
+
 docker run -d -p 8501:8501 --name recommender-container books-app
 ```
 
