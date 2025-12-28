@@ -49,3 +49,28 @@ Project layout
         └── models/
             └── knn.py
 ```
+
+Run with Docker on EC2
+---------------------
+
+Create an EC2 instance and add a **Custom TCP inbound rule on port 8501** in the Security Group.
+
+In the instance terminal:
+
+```bash
+sudo yum update -y
+sudo yum install -y docker
+sudo service docker start
+sudo usermod -a -G docker ec2-user
+newgrp docker
+sudo yum install git -y
+git clone https://github.com/Kostia9/books_recommender
+cd books_recommender
+docker build -t books-app .
+docker run -d -p 8501:8501 --name recommender-container books-app
+```
+
+Open in browser:
+```
+http://<public-ip>:8501
+```
