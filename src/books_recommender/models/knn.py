@@ -2,7 +2,7 @@
 kNN model utilities for the Books Recommender System.
 
 Provides:
-- build_knn: train NearestNeighbors over a title×user sparse matrix
+- build_knn: train NearestNeighbors over a title x user sparse matrix
 - save_artifacts / load_artifacts: persist and restore training outputs
 - recommend_by_title: query neighbors for a given book title
 """
@@ -10,7 +10,6 @@ Provides:
 from typing import Any
 
 import joblib
-
 import pandas as pd
 from scipy.sparse import csr_matrix
 from sklearn.neighbors import NearestNeighbors
@@ -32,30 +31,21 @@ def build_knn(
     Returns:
         (model, book_sparse, book_mapper, title_to_idx)
     """
-    ratings_agg = (
-        ratings.groupby(['user_id', 'title'], as_index=False)['rating']
-        .mean()
-    )
+    ratings_agg = ratings.groupby(["user_id", "title"], as_index=False)["rating"].mean()
 
-    ratings_agg['title_cat'] = ratings_agg['title'].astype('category')
-    ratings_agg['user_cat'] = ratings_agg['user_id'].astype('category')
+    ratings_agg["title_cat"] = ratings_agg["title"].astype("category")
+    ratings_agg["user_cat"] = ratings_agg["user_id"].astype("category")
 
-    book_mapper: dict[int, str] = dict(
-        enumerate(ratings_agg['title_cat'].cat.categories)
-    )
-    user_mapper: dict[int, int] = dict(
-        enumerate(ratings_agg['user_cat'].cat.categories)
-    )
-    title_to_idx: dict[str, int] = {
-        title: idx for idx, title in book_mapper.items()
-    }
+    book_mapper: dict[int, str] = dict(enumerate(ratings_agg["title_cat"].cat.categories))
+    user_mapper: dict[int, int] = dict(enumerate(ratings_agg["user_cat"].cat.categories))
+    title_to_idx: dict[str, int] = {title: idx for idx, title in book_mapper.items()}
 
     book_sparse = csr_matrix(
         (
-            ratings_agg['rating'],
+            ratings_agg["rating"],
             (
-                ratings_agg['title_cat'].cat.codes,
-                ratings_agg['user_cat'].cat.codes,
+                ratings_agg["title_cat"].cat.codes,
+                ratings_agg["user_cat"].cat.codes,
             ),
         ),
         shape=(len(book_mapper), len(user_mapper)),
@@ -80,20 +70,20 @@ def save_artifacts(
 
     Args:
         model: Trained NearestNeighbors model.
-        book_sparse: Item×user sparse matrix.
+        book_sparse: Item x user sparse matrix.
         book_mapper: Maps row index -> title.
         title_to_idx: Maps title -> row index.
         book_meta: Metadata indexed by title.
     """
     artifacts: Artifacts = {
-        'model': model,
-        'book_sparse': book_sparse,
-        'book_mapper': book_mapper,
-        'title_to_idx': title_to_idx,
-        'book_meta': book_meta,
+        "model": model,
+        "book_sparse": book_sparse,
+        "book_mapper": book_mapper,
+        "title_to_idx": title_to_idx,
+        "book_meta": book_meta,
     }
 
-    path = ARTIFACTS_DIR / 'recommender_system.joblib'
+    path = ARTIFACTS_DIR / "recommender_system.joblib"
     joblib.dump(artifacts, path)
 
 
@@ -104,11 +94,9 @@ def load_artifacts() -> Artifacts:
     Raises:
         FileNotFoundError: If artifacts file does not exist.
     """
-    path = ARTIFACTS_DIR / 'recommender_system.joblib'
+    path = ARTIFACTS_DIR / "recommender_system.joblib"
     if not path.exists():
-        raise FileNotFoundError(
-            f'Artifacts not found at {path}. Run pipeline training first.'
-        )
+        raise FileNotFoundError(f"Artifacts not found at {path}. Run pipeline training first.")
 
     artifacts: Artifacts = joblib.load(path)
 
@@ -131,7 +119,7 @@ def recommend_by_title(
     Args:
         book_title: Query title.
         model: Trained NearestNeighbors model.
-        book_sparse: Item×user sparse matrix.
+        book_sparse: Item x user sparse matrix.
         title_to_idx: Title -> row index.
         book_mapper: Row index -> title.
         book_meta: Metadata indexed by title.
@@ -142,9 +130,7 @@ def recommend_by_title(
         Empty DataFrame if title is not known.
     """
     if book_title not in title_to_idx:
-        return pd.DataFrame(
-            columns=['title', 'author', 'image_url', 'distance']
-        )
+        return pd.DataFrame(columns=["title", "author", "image_url", "distance"])
 
     idx = title_to_idx[book_title]
     book_vector = book_sparse[idx, :].reshape(1, -1)
@@ -156,18 +142,18 @@ def recommend_by_title(
         neighbor_idx = int(indices[0][neighbor_pos])
         rec_title = book_mapper[neighbor_idx]
 
-        author = 'Unknown'
-        image_url = ''
+        author = "Unknown"
+        image_url = ""
         if rec_title in book_meta.index:
-            author = str(book_meta.at[rec_title, 'author'])
-            image_url = str(book_meta.at[rec_title, 'image_url'])
+            author = str(book_meta.at[rec_title, "author"])
+            image_url = str(book_meta.at[rec_title, "image_url"])
 
         rows.append(
             {
-                'title': rec_title,
-                'author': author,
-                'image_url': image_url,
-                'distance': float(distances[0][neighbor_pos]),
+                "title": rec_title,
+                "author": author,
+                "image_url": image_url,
+                "distance": float(distances[0][neighbor_pos]),
             }
         )
 

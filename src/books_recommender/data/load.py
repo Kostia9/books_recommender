@@ -10,14 +10,14 @@ from books_recommender.config import RAW_DIR
 
 def load_books() -> pd.DataFrame:
     """Load books CSV."""
-    path = RAW_DIR / 'BX-Books.csv'
+    path = RAW_DIR / "BX-Books.csv"
     if not path.exists():
         raise FileNotFoundError(f"Required data file not found: {path}")
     df = pd.read_csv(
         path,
-        sep=';',
-        encoding='latin-1',
-        on_bad_lines='skip',
+        sep=";",
+        encoding="latin-1",
+        on_bad_lines="skip",
         low_memory=False,
     )
     logger.info("Loaded {} rows from {}", len(df), path.name)
@@ -26,14 +26,14 @@ def load_books() -> pd.DataFrame:
 
 def load_ratings() -> pd.DataFrame:
     """Load ratings CSV."""
-    path = RAW_DIR / 'BX-Book-Ratings.csv'
+    path = RAW_DIR / "BX-Book-Ratings.csv"
     if not path.exists():
         raise FileNotFoundError(f"Required data file not found: {path}")
     df = pd.read_csv(
         path,
-        sep=';',
-        encoding='latin-1',
-        on_bad_lines='skip',
+        sep=";",
+        encoding="latin-1",
+        on_bad_lines="skip",
     )
     logger.info("Loaded {} rows from {}", len(df), path.name)
     return df

@@ -7,6 +7,7 @@ __pycache__/
 .pytest_cache/
 .vscode/
 .venv/
-
+.mypy_cache/
+.ruff_cache/
 notebooks/
 *.joblib

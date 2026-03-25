@@ -7,15 +7,19 @@ Implements leave-one-out cross-validation (per user) for item-based kNN.
 from __future__ import annotations
 
 import argparse
-from typing import Iterable
+from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 import pandas as pd
 from loguru import logger
+from scipy.sparse import csr_matrix
+from sklearn.neighbors import NearestNeighbors
 
 from books_recommender.data.load import load_books, load_ratings
 from books_recommender.data.preprocess import preprocess
 from books_recommender.models.knn import build_knn
+
 
 def leave_one_out_split(
     ratings: pd.DataFrame,
@@ -32,7 +36,7 @@ def leave_one_out_split(
         (train, test) DataFrames.
     """
     holdout_indices: list[int] = []
-    for _, group in ratings.groupby('user_id'):
+    for _, group in ratings.groupby("user_id"):
         if len(group) < 2:
             continue
         holdout_idx = int(rng.choice(group.index.values))
@@ -46,8 +50,8 @@ def leave_one_out_split(
 def recommend_from_history(
     *,
     history_titles: Iterable[str],
-    model,
-    book_sparse,
+    model: NearestNeighbors,
+    book_sparse: csr_matrix,
     title_to_idx: dict[str, int],
     book_mapper: dict[int, str],
     k: int,
@@ -59,7 +63,7 @@ def recommend_from_history(
     Args:
         history_titles: Titles the user interacted with in training.
         model: Trained NearestNeighbors model.
-        book_sparse: Item×user sparse matrix.
+        book_sparse: Item x user sparse matrix.
         title_to_idx: Title -> row index.
         book_mapper: Row index -> title.
         k: Number of recommendations to return.
@@ -118,13 +122,11 @@ def evaluate_leave_one_out(
     train, test = leave_one_out_split(ratings, rng)
 
     model, book_sparse, book_mapper, title_to_idx = build_knn(train)
-    history_by_user = train.groupby('user_id')['title'].apply(list)
+    history_by_user = train.groupby("user_id")["title"].apply(list)
 
-    test_users = test['user_id'].unique()
+    test_users = test["user_id"].unique()
     if max_users is not None and max_users < len(test_users):
-        sampled_users = set(
-            rng.choice(test_users, size=max_users, replace=False).tolist()
-        )
+        sampled_users = set(rng.choice(test_users, size=max_users, replace=False).tolist())
     else:
         sampled_users = None
 
@@ -135,8 +137,8 @@ def evaluate_leave_one_out(
     skipped_empty_history = 0
 
     for row in test.itertuples(index=False):
-        user_id = row.user_id
-        true_title = row.title
+        user_id: Any = row.user_id
+        true_title: str = str(row.title)
 
         if sampled_users is not None and user_id not in sampled_users:
             continue
@@ -172,35 +174,33 @@ def evaluate_leave_one_out(
     mrr = mrr_total / users_evaluated if users_evaluated else 0.0
 
     return {
-        'users_evaluated': users_evaluated,
-        'hit_rate': hit_rate,
-        'mrr': mrr,
-        'k': k,
-        'neighbors_per_item': neighbors_per_item,
-        'skipped_empty_history': skipped_empty_history,
-        'skipped_missing_items': skipped_missing_items,
+        "users_evaluated": users_evaluated,
+        "hit_rate": hit_rate,
+        "mrr": mrr,
+        "k": k,
+        "neighbors_per_item": neighbors_per_item,
+        "skipped_empty_history": skipped_empty_history,
+        "skipped_missing_items": skipped_missing_items,
     }
 
 
 def main() -> None:
     """Run leave-one-out evaluation and print summary metrics."""
-    parser = argparse.ArgumentParser(
-        description='Evaluate item-based kNN with leave-one-out CV.'
-    )
-    parser.add_argument('--k', type=int, default=10)
-    parser.add_argument('--neighbors-per-item', type=int, default=50)
-    parser.add_argument('--random-state', type=int, default=42)
-    parser.add_argument('--max-users', type=int, default=None)
+    parser = argparse.ArgumentParser(description="Evaluate item-based kNN with leave-one-out CV.")
+    parser.add_argument("--k", type=int, default=10)
+    parser.add_argument("--neighbors-per-item", type=int, default=50)
+    parser.add_argument("--random-state", type=int, default=42)
+    parser.add_argument("--max-users", type=int, default=None)
     args = parser.parse_args()
 
-    logger.info('Loading data...')
+    logger.info("Loading data...")
     books = load_books()
     ratings = load_ratings()
 
-    logger.info('Preprocessing...')
+    logger.info("Preprocessing...")
     ratings_clean, _ = preprocess(books, ratings)
 
-    logger.info('Evaluating...')
+    logger.info("Evaluating...")
     results = evaluate_leave_one_out(
         ratings_clean,
         k=args.k,
@@ -210,20 +210,20 @@ def main() -> None:
     )
 
     logger.info(
-        'Users evaluated: {}',
-        int(results['users_evaluated']),
+        "Users evaluated: {}",
+        int(results["users_evaluated"]),
     )
-    logger.info('Hit Rate@{}: {:.4f}', args.k, results['hit_rate'])
-    logger.info('MRR@{}: {:.4f}', args.k, results['mrr'])
+    logger.info("Hit Rate@{}: {:.4f}", args.k, results["hit_rate"])
+    logger.info("MRR@{}: {:.4f}", args.k, results["mrr"])
     logger.info(
-        'Skipped (no history): {}',
-        int(results['skipped_empty_history']),
+        "Skipped (no history): {}",
+        int(results["skipped_empty_history"]),
     )
     logger.info(
-        'Skipped (missing item in train): {}',
-        int(results['skipped_missing_items']),
+        "Skipped (missing item in train): {}",
+        int(results["skipped_missing_items"]),
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

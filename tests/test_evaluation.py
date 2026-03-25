@@ -33,7 +33,7 @@ def test_leave_one_out_skips_users_with_single_rating() -> None:
         }
     )
     rng = np.random.default_rng(0)
-    train, test = leave_one_out_split(ratings, rng)
+    _train, test = leave_one_out_split(ratings, rng)
     assert len(test) == 1
     assert test.iloc[0]["user_id"] == 2
 
