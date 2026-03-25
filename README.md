@@ -5,21 +5,39 @@ Item-based collaborative filtering demo built with Streamlit and scikit-learn. I
 
 Data
 ----
-- Raw CSVs from the Books dataset live in `data/raw/` (`BX-Users.csv`, `BX-Books.csv`, `BX-Book-Ratings.csv`).
-- Trained artifacts are saved to `data/artifacts/recommender_system.pkl` (created by the pipeline below).
+- Raw CSVs from the Books dataset live in `data/raw/` (`BX-Books.csv`, `BX-Book-Ratings.csv`).
+- Trained artifacts are saved to `data/artifacts/recommender_system.joblib` (created by the pipeline below).
 
-Setup (Poetry)
---------------
+Setup (uv)
+----------
+Install runtime dependencies only:
+
 ```bash
-poetry install
+uv sync
+```
+
+With test tooling (`pytest`):
+
+```bash
+uv sync --extra dev
 ```
 
 Run the Streamlit app
 ---------------------
-The UI will train the model on first run if `data/artifacts/recommender_system.pkl`
-is missing. Launch the app and search for a title to get nearest-neighbor recommendations.
+The UI will train the model on first run if `data/artifacts/recommender_system.joblib`
+is missing. Use **Title contains** in the sidebar to filter the book list; pick a book and
+click **Show Recommendation** for nearest-neighbor titles.
+
 ```bash
-poetry run streamlit run app.py
+uv run streamlit run app.py
+```
+
+Tests
+-----
+From the project root (after `uv sync --extra dev`):
+
+```bash
+uv run pytest
 ```
 
 Project layout
@@ -28,27 +46,42 @@ Project layout
 .
 ├── .gitignore
 ├── app.py
-├── poetry.lock
+├── uv.lock
 ├── pyproject.toml
 ├── README.md
 ├── data/
 │   ├── artifacts/
-│   │   └── recommender_system.pkl
+│   │   └── recommender_system.joblib
 │   └── raw/
 │       ├── BX-Book-Ratings.csv
-│       ├── BX-Books.csv
-│       └── BX-Users.csv
+│       └── BX-Books.csv
+├── tests/
+│   ├── test_evaluation.py
+│   ├── test_knn.py
+│   ├── test_preprocess.py
+│   └── test_title_filter.py
 └── src/
     └── books_recommender/
-        ├── __init__.py
         ├── config.py
+        ├── evaluation.py
         ├── pipeline.py
+        ├── title_filter.py
         ├── data/
         │   ├── load.py
         │   └── preprocess.py
         └── models/
             └── knn.py
 ```
+
+Offline evaluation (optional)
+-----------------------------
+Leave-one-out metrics on the preprocessed dataset (requires raw CSVs under `data/raw/`):
+
+```bash
+uv run python -m books_recommender.evaluation --k 10 --max-users 500
+```
+
+Use `--help` for more options.
 
 Run with Docker on EC2
 ---------------------
@@ -66,7 +99,7 @@ curl -fsSL https://get.docker.com -o get-docker.sh
 
 sudo sh get-docker.sh
 
-sudo usermod -aG docker ubuntu
+sudo usermod -aG docker $USER
 
 newgrp docker
 

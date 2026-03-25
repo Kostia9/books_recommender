@@ -8,12 +8,15 @@ and provides title search + item-based recommendations.
 from typing import Any
 
 import streamlit as st
+from loguru import logger
 
 from books_recommender.config import ARTIFACTS_DIR
 from books_recommender.models.knn import load_artifacts, recommend_by_title
 from books_recommender.pipeline import run_training_pipeline
+from books_recommender.title_filter import filter_titles_by_substring
 
-ARTIFACTS_PATH = ARTIFACTS_DIR / 'recommender_system.pkl'
+ARTIFACTS_PATH = ARTIFACTS_DIR / 'recommender_system.joblib'
+NO_TITLE_MATCH_PLACEHOLDER = '— No matching titles — change «Title contains» above'
 
 
 @st.cache_resource
@@ -42,7 +45,16 @@ def main() -> None:
     try:
         ensure_artifacts()
         artifacts = load_system()
+    except FileNotFoundError as exc:
+        logger.exception("Artifact file not found")
+        st.error(f'Artifact file missing: {exc}')
+        return
+    except ValueError as exc:
+        logger.exception("Invalid artifact data")
+        st.error(f'Invalid artifact data: {exc}')
+        return
     except Exception as exc:
+        logger.exception("Unexpected error loading artifacts")
         st.error(f'Failed to prepare model artifacts: {exc}')
         return
 
@@ -57,32 +69,30 @@ def main() -> None:
     st.sidebar.header('Search')
     query = st.sidebar.text_input('Title contains', value='Harry Potter')
 
-    if query.strip():
-        term = query.lower()
-        filtered_titles = [t for t in all_titles if term in t.lower()]
-    else:
-        filtered_titles = all_titles[:100]
-
-    filtered_titles = filtered_titles[:2000]
+    filtered_titles = filter_titles_by_substring(all_titles, query)
     if not filtered_titles:
-        st.warning('No matches found.')
-        return
-
-    options: list[str] = []
-    for title in filtered_titles:
-        author = 'Unknown'
-        if title in book_meta.index:
-            # book_meta is indexed by title; value is a Series
-            author = str(book_meta.at[title, 'author'])
-        options.append(f'{title} — {author}')
+        st.warning('No titles match your search. Adjust «Title contains».')
+        options = [NO_TITLE_MATCH_PLACEHOLDER]
+    else:
+        options = []
+        for title in filtered_titles:
+            author = 'Unknown'
+            if title in book_meta.index:
+                # book_meta is indexed by title; value is a Series
+                author = str(book_meta.at[title, 'author'])
+            options.append(f'{title} — {author}')
 
     choice = st.sidebar.selectbox(
         'Type or select a book from the dropdown',
         options=options,
+        disabled=not filtered_titles,
     )
 
     separator = ' — '
-    selected_title = choice.split(separator, maxsplit=1)[0]
+    if filtered_titles:
+        selected_title = choice.split(separator, maxsplit=1)[0]
+    else:
+        selected_title = None
 
     k = st.sidebar.slider(
         'Number of recommendations',
@@ -92,6 +102,12 @@ def main() -> None:
     )
 
     if st.button('Show Recommendation'):
+        if not filtered_titles or selected_title is None:
+            st.error('No book selected. Search until the dropdown lists titles.')
+            return
+        if selected_title not in title_to_idx:
+            st.error('Selected title is not in the model. Pick another book.')
+            return
         with st.spinner('Computing neighbors...'):
             recs = recommend_by_title(
                 book_title=selected_title,

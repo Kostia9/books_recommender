@@ -13,8 +13,8 @@ ARTIFACTS_DIR: Final[Path] = DATA_DIR / 'artifacts'
 
 ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 
-MIN_USER_RATINGS: Final[int] = 30
-MIN_BOOK_RATINGS: Final[int] = 10
+MIN_USER_RATINGS: Final[int] = 15
+MIN_BOOK_RATINGS: Final[int] = 5
 
 KNN_METRIC: Final[str] = 'cosine'
 KNN_ALGO: Final[str] = 'brute'

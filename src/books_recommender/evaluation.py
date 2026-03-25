@@ -7,18 +7,15 @@ Implements leave-one-out cross-validation (per user) for item-based kNN.
 from __future__ import annotations
 
 import argparse
-import logging
 from typing import Iterable
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 
-from books_recommender.data.load import load_books, load_ratings, load_users
+from books_recommender.data.load import load_books, load_ratings
 from books_recommender.data.preprocess import preprocess
 from books_recommender.models.knn import build_knn
-
-logger = logging.getLogger(__name__)
-
 
 def leave_one_out_split(
     ratings: pd.DataFrame,
@@ -169,7 +166,7 @@ def evaluate_leave_one_out(
             rank = recs.index(true_title) + 1
             mrr_total += 1.0 / rank
         if users_evaluated % 100 == 0:
-            logger.info("Evaluated %d users...", users_evaluated)
+            logger.info("Evaluated {} users...", users_evaluated)
 
     hit_rate = hits / users_evaluated if users_evaluated else 0.0
     mrr = mrr_total / users_evaluated if users_evaluated else 0.0
@@ -196,18 +193,12 @@ def main() -> None:
     parser.add_argument('--max-users', type=int, default=None)
     args = parser.parse_args()
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format='[%(levelname)s] %(message)s',
-    )
-
     logger.info('Loading data...')
-    users = load_users()
     books = load_books()
     ratings = load_ratings()
 
     logger.info('Preprocessing...')
-    ratings_clean, _ = preprocess(users, books, ratings)
+    ratings_clean, _ = preprocess(books, ratings)
 
     logger.info('Evaluating...')
     results = evaluate_leave_one_out(
@@ -219,17 +210,17 @@ def main() -> None:
     )
 
     logger.info(
-        'Users evaluated: %d',
+        'Users evaluated: {}',
         int(results['users_evaluated']),
     )
-    logger.info('Hit Rate@%d: %.4f', args.k, results['hit_rate'])
-    logger.info('MRR@%d: %.4f', args.k, results['mrr'])
+    logger.info('Hit Rate@{}: {:.4f}', args.k, results['hit_rate'])
+    logger.info('MRR@{}: {:.4f}', args.k, results['mrr'])
     logger.info(
-        'Skipped (no history): %d',
+        'Skipped (no history): {}',
         int(results['skipped_empty_history']),
     )
     logger.info(
-        'Skipped (missing item in train): %d',
+        'Skipped (missing item in train): {}',
         int(results['skipped_missing_items']),
     )
 

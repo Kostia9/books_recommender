@@ -7,8 +7,9 @@ Provides:
 - recommend_by_title: query neighbors for a given book title
 """
 
-import pickle
 from typing import Any
+
+import joblib
 
 import pandas as pd
 from scipy.sparse import csr_matrix
@@ -75,7 +76,7 @@ def save_artifacts(
     book_meta: pd.DataFrame,
 ) -> None:
     """
-    Save model artifacts to a single pickle.
+    Save model artifacts to a single joblib file.
 
     Args:
         model: Trained NearestNeighbors model.
@@ -92,9 +93,8 @@ def save_artifacts(
         'book_meta': book_meta,
     }
 
-    path = ARTIFACTS_DIR / 'recommender_system.pkl'
-    with open(path, 'wb') as f:
-        pickle.dump(artifacts, f)
+    path = ARTIFACTS_DIR / 'recommender_system.joblib'
+    joblib.dump(artifacts, path)
 
 
 def load_artifacts() -> Artifacts:
@@ -102,16 +102,15 @@ def load_artifacts() -> Artifacts:
     Load saved artifacts from disk.
 
     Raises:
-        FileNotFoundError: If artifacts pickle does not exist.
+        FileNotFoundError: If artifacts file does not exist.
     """
-    path = ARTIFACTS_DIR / 'recommender_system.pkl'
+    path = ARTIFACTS_DIR / 'recommender_system.joblib'
     if not path.exists():
         raise FileNotFoundError(
             f'Artifacts not found at {path}. Run pipeline training first.'
         )
 
-    with open(path, 'rb') as f:
-        artifacts: Artifacts = pickle.load(f)
+    artifacts: Artifacts = joblib.load(path)
 
     return artifacts
 
