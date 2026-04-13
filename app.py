@@ -76,7 +76,7 @@ def main() -> None:
         selected_title = None
     else:
         authors = book_meta["author"].reindex(filtered_titles).fillna("Unknown").astype(str)
-        author_by_title = dict(zip(filtered_titles, authors))
+        author_by_title = dict(zip(filtered_titles, authors, strict=True))
         selected_title = st.sidebar.selectbox(
             "Type or select a book from the dropdown",
             options=filtered_titles,
