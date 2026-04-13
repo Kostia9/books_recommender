@@ -7,18 +7,21 @@ Implements leave-one-out cross-validation (per user) for item-based kNN.
 from __future__ import annotations
 
 import argparse
+from collections import defaultdict
 from collections.abc import Iterable
-from typing import Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 from loguru import logger
-from scipy.sparse import csr_matrix
-from sklearn.neighbors import NearestNeighbors
 
 from books_recommender.data.load import load_books, load_ratings
 from books_recommender.data.preprocess import preprocess
 from books_recommender.models.knn import build_knn
+
+if TYPE_CHECKING:
+    from scipy.sparse import csr_matrix
+    from sklearn.neighbors import NearestNeighbors
 
 
 def leave_one_out_split(
@@ -75,7 +78,7 @@ def recommend_from_history(
 
     n_items = book_sparse.shape[0]
     n_neighbors = min(neighbors_per_item, n_items)
-    scores: dict[str, float] = {}
+    scores: defaultdict[str, float] = defaultdict(float)
 
     for title in history_set:
         idx = title_to_idx[title]
@@ -87,8 +90,7 @@ def recommend_from_history(
             neighbor_title = book_mapper[int(neighbor_idx)]
             if neighbor_title in history_set:
                 continue
-            score = 1.0 - float(dist)
-            scores[neighbor_title] = scores.get(neighbor_title, 0.0) + score
+            scores[neighbor_title] += 1.0 - float(dist)
 
     if not scores:
         return []
@@ -137,7 +139,7 @@ def evaluate_leave_one_out(
     skipped_empty_history = 0
 
     for row in test.itertuples(index=False):
-        user_id: Any = row.user_id
+        user_id = row.user_id
         true_title: str = str(row.title)
 
         if sampled_users is not None and user_id not in sampled_users:
@@ -163,10 +165,11 @@ def evaluate_leave_one_out(
         )
 
         users_evaluated += 1
-        if true_title in recs:
-            hits += 1
-            rank = recs.index(true_title) + 1
-            mrr_total += 1.0 / rank
+        for rank, rec in enumerate(recs, start=1):
+            if rec == true_title:
+                hits += 1
+                mrr_total += 1.0 / rank
+                break
         if users_evaluated % 100 == 0:
             logger.info("Evaluated {} users...", users_evaluated)
 

@@ -84,8 +84,8 @@ def test_save_and_load_artifacts_roundtrip(
     monkeypatch,
 ) -> None:
     monkeypatch.setattr(
-        "books_recommender.models.knn.ARTIFACTS_DIR",
-        tmp_path,
+        "books_recommender.models.knn.ARTIFACTS_PATH",
+        tmp_path / "recommender_system.joblib",
     )
     model, book_sparse, book_mapper, title_to_idx = build_knn(tiny_ratings)
     save_artifacts(

@@ -18,6 +18,8 @@ from books_recommender.config import ARTIFACTS_DIR, KNN_ALGO, KNN_METRIC
 
 Artifacts = dict[str, Any]
 
+ARTIFACTS_PATH = ARTIFACTS_DIR / "recommender_system.joblib"
+
 
 def build_knn(
     ratings: pd.DataFrame,
@@ -37,8 +39,8 @@ def build_knn(
     ratings_agg["user_cat"] = ratings_agg["user_id"].astype("category")
 
     book_mapper: dict[int, str] = dict(enumerate(ratings_agg["title_cat"].cat.categories))
-    user_mapper: dict[int, int] = dict(enumerate(ratings_agg["user_cat"].cat.categories))
     title_to_idx: dict[str, int] = {title: idx for idx, title in book_mapper.items()}
+    n_users = len(ratings_agg["user_cat"].cat.categories)
 
     book_sparse = csr_matrix(
         (
@@ -48,7 +50,7 @@ def build_knn(
                 ratings_agg["user_cat"].cat.codes,
             ),
         ),
-        shape=(len(book_mapper), len(user_mapper)),
+        shape=(len(book_mapper), n_users),
     )
 
     model = NearestNeighbors(metric=KNN_METRIC, algorithm=KNN_ALGO)
@@ -83,8 +85,7 @@ def save_artifacts(
         "book_meta": book_meta,
     }
 
-    path = ARTIFACTS_DIR / "recommender_system.joblib"
-    joblib.dump(artifacts, path)
+    joblib.dump(artifacts, ARTIFACTS_PATH)
 
 
 def load_artifacts() -> Artifacts:
@@ -94,13 +95,12 @@ def load_artifacts() -> Artifacts:
     Raises:
         FileNotFoundError: If artifacts file does not exist.
     """
-    path = ARTIFACTS_DIR / "recommender_system.joblib"
-    if not path.exists():
-        raise FileNotFoundError(f"Artifacts not found at {path}. Run pipeline training first.")
-
-    artifacts: Artifacts = joblib.load(path)
-
-    return artifacts
+    try:
+        return joblib.load(ARTIFACTS_PATH)
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            f"Artifacts not found at {ARTIFACTS_PATH}. Run pipeline training first."
+        ) from None
 
 
 def recommend_by_title(
@@ -137,24 +137,11 @@ def recommend_by_title(
 
     distances, indices = model.kneighbors(book_vector, n_neighbors=n + 1)
 
-    rows: list[dict[str, Any]] = []
-    for neighbor_pos in range(1, len(indices[0])):
-        neighbor_idx = int(indices[0][neighbor_pos])
-        rec_title = book_mapper[neighbor_idx]
-
-        author = "Unknown"
-        image_url = ""
-        if rec_title in book_meta.index:
-            author = str(book_meta.at[rec_title, "author"])
-            image_url = str(book_meta.at[rec_title, "image_url"])
-
-        rows.append(
-            {
-                "title": rec_title,
-                "author": author,
-                "image_url": image_url,
-                "distance": float(distances[0][neighbor_pos]),
-            }
-        )
-
-    return pd.DataFrame(rows)
+    rec_titles = [book_mapper[int(i)] for i in indices[0][1:]]
+    meta = book_meta.reindex(rec_titles)
+    return pd.DataFrame({
+        "title": rec_titles,
+        "author": meta["author"].fillna("Unknown").astype(str).tolist(),
+        "image_url": meta["image_url"].fillna("").astype(str).tolist(),
+        "distance": distances[0][1:].tolist(),
+    })

@@ -19,6 +19,7 @@ def load_books() -> pd.DataFrame:
         encoding="latin-1",
         on_bad_lines="skip",
         low_memory=False,
+        usecols=["ISBN", "Book-Title", "Book-Author", "Image-URL-M"],
     )
     logger.info("Loaded {} rows from {}", len(df), path.name)
     return df

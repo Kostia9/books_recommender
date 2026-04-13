@@ -43,8 +43,6 @@ def preprocess(
         columns={
             "Book-Title": "title",
             "Book-Author": "author",
-            "Year-Of-Publication": "year_of_publication",
-            "Publisher": "publisher",
             "Image-URL-M": "image_url",
         },
         inplace=True,
@@ -73,10 +71,8 @@ def preprocess(
     ratings = ratings.merge(books, on="ISBN", how="inner")
     logger.info("Ratings after merge with books: {}", len(ratings))
 
-    rating_counts = ratings.groupby("ISBN", as_index=False).agg(num_of_rating=("rating", "count"))
-
-    ratings = ratings.merge(rating_counts, on="ISBN", how="inner")
-    ratings = ratings[ratings["num_of_rating"] >= MIN_BOOK_RATINGS]
+    isbn_counts = ratings.groupby("ISBN")["rating"].transform("count")
+    ratings = ratings[isbn_counts >= MIN_BOOK_RATINGS]
     ratings.drop_duplicates(subset=["user_id", "ISBN"], inplace=True)
     logger.info(
         "Ratings after min-book-ratings filter (>={}) and final dedup: {}",
@@ -84,7 +80,6 @@ def preprocess(
         len(ratings),
     )
 
-    # --- Normalize ratings (user-centering) ---
     user_mean = ratings.groupby("user_id")["rating"].transform("mean")
     ratings["rating"] = ratings["rating"] - user_mean
 

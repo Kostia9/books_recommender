@@ -10,12 +10,10 @@ from typing import Any
 import streamlit as st
 from loguru import logger
 
-from books_recommender.config import ARTIFACTS_DIR
-from books_recommender.models.knn import load_artifacts, recommend_by_title
+from books_recommender.models.knn import ARTIFACTS_PATH, load_artifacts, recommend_by_title
 from books_recommender.pipeline import run_training_pipeline
 from books_recommender.title_filter import filter_titles_by_substring
 
-ARTIFACTS_PATH = ARTIFACTS_DIR / "recommender_system.joblib"
 NO_TITLE_MATCH_PLACEHOLDER = "— No matching titles — change «Title contains» above"
 
 
@@ -70,24 +68,20 @@ def main() -> None:
     filtered_titles = filter_titles_by_substring(all_titles, query)
     if not filtered_titles:
         st.warning("No titles match your search. Adjust «Title contains».")
-        options = [NO_TITLE_MATCH_PLACEHOLDER]
+        st.sidebar.selectbox(
+            "Type or select a book from the dropdown",
+            options=[NO_TITLE_MATCH_PLACEHOLDER],
+            disabled=True,
+        )
+        selected_title = None
     else:
-        options = []
-        for title in filtered_titles:
-            author = "Unknown"
-            if title in book_meta.index:
-                # book_meta is indexed by title; value is a Series
-                author = str(book_meta.at[title, "author"])
-            options.append(f"{title} — {author}")
-
-    choice = st.sidebar.selectbox(
-        "Type or select a book from the dropdown",
-        options=options,
-        disabled=not filtered_titles,
-    )
-
-    separator = " — "
-    selected_title = choice.split(separator, maxsplit=1)[0] if filtered_titles else None
+        authors = book_meta["author"].reindex(filtered_titles).fillna("Unknown").astype(str)
+        author_by_title = dict(zip(filtered_titles, authors))
+        selected_title = st.sidebar.selectbox(
+            "Type or select a book from the dropdown",
+            options=filtered_titles,
+            format_func=lambda t: f"{t} — {author_by_title[t]}",
+        )
 
     k = st.sidebar.slider(
         "Number of recommendations",
