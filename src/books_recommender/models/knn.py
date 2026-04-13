@@ -96,7 +96,8 @@ def load_artifacts() -> Artifacts:
         FileNotFoundError: If artifacts file does not exist.
     """
     try:
-        return joblib.load(ARTIFACTS_PATH)
+        artifacts: Artifacts = joblib.load(ARTIFACTS_PATH)
+        return artifacts
     except FileNotFoundError:
         raise FileNotFoundError(
             f"Artifacts not found at {ARTIFACTS_PATH}. Run pipeline training first."
@@ -139,9 +140,11 @@ def recommend_by_title(
 
     rec_titles = [book_mapper[int(i)] for i in indices[0][1:]]
     meta = book_meta.reindex(rec_titles)
-    return pd.DataFrame({
-        "title": rec_titles,
-        "author": meta["author"].fillna("Unknown").astype(str).tolist(),
-        "image_url": meta["image_url"].fillna("").astype(str).tolist(),
-        "distance": distances[0][1:].tolist(),
-    })
+    return pd.DataFrame(
+        {
+            "title": rec_titles,
+            "author": meta["author"].fillna("Unknown").astype(str).tolist(),
+            "image_url": meta["image_url"].fillna("").astype(str).tolist(),
+            "distance": distances[0][1:].tolist(),
+        }
+    )
